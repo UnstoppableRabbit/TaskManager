@@ -10,6 +10,8 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using TaskManager.API.Services;
+using Domain.Model;
+using Domain.Enums;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,7 +64,7 @@ app.MapPut("/tasks/{id}", [Authorize] async (Guid id, UpdateTaskCommand cmd, Tas
     return result is null ? Results.NotFound() : Results.Ok(result);
 });
 
-app.MapGet("/tasks", async ([FromQuery] string? status, [FromQuery] string? createdBy,
+app.MapGet("/tasks", async ([FromQuery] StatusTask? status, [FromQuery] Guid? createdBy,
                              [FromQuery] DateTime? from, [FromQuery] DateTime? to,
                              [FromQuery] string? sortBy,
                              TaskService taskService) =>

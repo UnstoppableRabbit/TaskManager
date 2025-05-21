@@ -8,11 +8,17 @@ namespace TaskManager.API.Services
     public class TaskService
     {
         private readonly TaskRepository _taskRepo;
-        public TaskService(TaskRepository taskRepo) => _taskRepo = taskRepo;
+        private readonly UserRepository _userRepo;
+        public TaskService(TaskRepository taskRepo, UserRepository userRepo) 
+        { 
+            _taskRepo = taskRepo;
+            _userRepo = userRepo;
+        }
 
         public async Task<TaskItem> Create(CreateTaskCommand cmd, Guid userId)
         {
-            try {
+            try 
+            {
                 var task = new TaskItem
                 {
                     Title = cmd.Title,
@@ -29,11 +35,14 @@ namespace TaskManager.API.Services
             }
         }
 
-        public async Task<bool> Delete(Guid id, Guid userId)
+        public async Task<bool> Delete(Guid id, string userLogin)
         {
             try
             {
-                var task = await _taskRepo.DeleteAsync(id, userId);
+                var user = await _userRepo.GetByLoginAsync(userLogin);
+                if (user is null) 
+                    throw new Exception("User not found");
+                var task = await _taskRepo.DeleteAsync(id, user.Id);
                 return true;
             }
             catch (Exception ex)
@@ -42,33 +51,32 @@ namespace TaskManager.API.Services
             }
         }
 
-        public async Task<TaskItem?> Update(Guid id, UpdateTaskCommand cmd, Guid userId)
+        public async Task<TaskItem?> Update(Guid id, UpdateTaskCommand cmd, string userLogin)
         {
             var task = await _taskRepo.GetByIdAsync(id);
             if (task is null) return null;
 
             if (Enum.IsDefined(typeof(StatusTask), cmd.Status)) task.Status = (StatusTask)cmd.Status;
-            if (cmd.ActualTime is not null) task.ActualTime = cmd.ActualTime;
+            if (cmd.ActualTime is not null) task.ActualDuration = cmd.ActualTime;
 
-            if (cmd.Status == "Завершена")
+            if (cmd.Status == (short)StatusTask.Done)
             {
                 task.ClosedAt = DateTime.UtcNow;
             }
-
-            await _context.SaveChangesAsync();
+            await _taskRepo.UpdateAsync(id, task);
             return task;
         }
 
-        public async Task<IEnumerable<TaskItem>> GetFiltered(string? status, string? createdBy,
+        public async Task<IEnumerable<TaskItem>> GetFiltered(StatusTask? status, Guid? createdBy,
             DateTime? from, DateTime? to, string? sortBy)
         {
-            var query = _context.Tasks.AsQueryable();
+            var query = _taskRepo.Query();
 
-            if (!string.IsNullOrWhiteSpace(status))
+            if (status != null)
                 query = query.Where(t => t.Status == status);
 
-            if (!string.IsNullOrWhiteSpace(createdBy))
-                query = query.Where(t => t.CreatedBy == createdBy);
+            if (createdBy != null)
+                query = query.Where(t => t.CreatedByUserId == createdBy);
 
             if (from is not null)
                 query = query.Where(t => t.CreatedAt >= from);
@@ -79,7 +87,7 @@ namespace TaskManager.API.Services
             query = sortBy switch
             {
                 "date" => query.OrderBy(t => t.CreatedAt),
-                "user" => query.OrderBy(t => t.CreatedBy),
+                "user" => query.OrderBy(t => t.CreatedByUserId),
                 "status" => query.OrderBy(t => t.Status),
                 _ => query.OrderByDescending(t => t.CreatedAt)
             };

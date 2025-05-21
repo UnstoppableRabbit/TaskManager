@@ -20,8 +20,13 @@ namespace Infrastructure
             return _context.SaveChangesAsync();
         }
 
-        public Task UpdateAsync()
+        public Task UpdateAsync(Guid taskId, TaskItem task)
         {
+            var existingTask = _context.Tasks.FirstOrDefault(t => t.Id == taskId);
+            if (existingTask is null) throw new Exception("Task by this id not found");
+            existingTask.Comments = task.Comments;
+            existingTask.ActualDuration = task.ActualDuration;
+            existingTask.Status = task.Status;
             return _context.SaveChangesAsync();
         }
 
