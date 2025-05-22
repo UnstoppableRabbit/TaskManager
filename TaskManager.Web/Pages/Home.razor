@@ -1,0 +1,109 @@
+﻿@using Domain.Enums
+@using Domain.Model
+@page "/"
+
+<PageTitle>Home</PageTitle>
+
+<div class="container py-4">
+    <h1 class="mb-4">Task Tracker</h1>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <input class="form-control" placeholder="Filter by user" @bind="FilterUser">
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" @bind="FilterStatus">
+                <option value="">All Statuses</option>
+                <option value="Created">Created</option>
+                <option value="InProgress">In Progress</option>
+                <option value="Completed">Completed</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <input class="form-control" type="date" @bind="FilterDate">
+        </div>
+        <div class="col-md-3 text-end">
+            <button class="btn btn-primary" @onclick="CreateTask">+ New Task</button>
+        </div>
+    </div>
+
+    <div class="row">
+        @foreach (var status in Enum.GetValues(typeof(StatusTask)))
+        {
+            <div class="col-md-4 dropzone p-2"
+                 @ondragover:preventDefault
+                 @ondrop="@(async (e) => await OnDrop(e, (StatusTask)status))">
+                <h4>@statusLabels[(StatusTask)status]</h4>
+                @foreach (var task in FilteredTasks.Where(t => t.Status == (StatusTask)status))
+                {
+                    <div class="card task-card mb-3"
+                         draggable="true"
+                         @ondragstart="@((e) => OnDragStart(e, task.Id))">
+                        <div class="card-body">
+                            <h5 class="card-title">@task.Title</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">@task.CreatedByUserId</h6>
+                            <p class="card-text">@task.Description</p>
+                            <span class="badge bg-secondary">@task.Status</span>
+                            <p class="mt-2 small text-muted">Created: @task.CreatedAt.ToShortDateString()</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    string? FilterUser;
+    string? FilterStatus;
+    DateTime? FilterDate;
+    Guid DraggedTaskId;
+
+    readonly Dictionary<StatusTask, string> statusLabels = new()
+        {
+        { StatusTask.Created, "Created" },
+        { StatusTask.InProgress, "In Progress" },
+        { StatusTask.Done, "Completed" }
+    };
+
+    List<TaskItem> AllTasks = new(){
+    new TaskItem { Title = "Setup Project", Description = "Create project structure", Status = StatusTask.Created, CreatedByUserId = Guid.Empty, CreatedAt = DateTime.UtcNow.AddDays(-1) },
+    new TaskItem { Title = "Build UI", Description = "Design main screen", Status = StatusTask.Created, CreatedByUserId = Guid.Empty, CreatedAt = DateTime.UtcNow },
+    new TaskItem { Title = "API Layer", Description = "Implement backend", Status = StatusTask.Done, CreatedByUserId = Guid.Empty, CreatedAt = DateTime.UtcNow.AddDays(-2) },
+    };// заполните при инициализации
+    IEnumerable<TaskItem> FilteredTasks => AllTasks
+    // .Where(t => string.IsNullOrWhiteSpace(FilterUser) || t.CreatedByUserId.Contains(FilterUser, StringComparison.OrdinalIgnoreCase))
+    .Where(t => string.IsNullOrWhiteSpace(FilterStatus) || t.Status == Enum.Parse<StatusTask>(FilterStatus))
+    .Where(t => FilterDate == null || t.CreatedAt.Date == FilterDate.Value.Date);
+
+    void CreateTask()
+    {
+        // логика создания
+    }
+    void OnDragStart(DragEventArgs e, Guid taskId)
+    {
+        DraggedTaskId = taskId;
+    }
+
+    async Task OnDrop(DragEventArgs e, StatusTask newStatus)
+    {
+        var task = AllTasks.FirstOrDefault(t => t.Id == DraggedTaskId);
+        if (task is not null && task.Status != newStatus)
+        {
+            task.Status = newStatus;
+        }
+
+        StateHasChanged();
+    }
+
+    RenderFragment<TaskItem> TaskCard => task => @<div class="card task-card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">@task.Title</h5>
+            <h6 class="card-subtitle mb-2 text-muted">@task.CreatedByUserId</h6>
+            <p class="card-text">@task.Description</p>
+            <span class="badge bg-secondary">@task.Status</span>
+            <p class="mt-2 small text-muted">Created: @task.CreatedAt.ToShortDateString()</p>
+        </div>
+    </div>;
+}
