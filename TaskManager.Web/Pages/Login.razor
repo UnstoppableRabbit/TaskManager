@@ -1,0 +1,20 @@
+﻿@inject AuthService Auth
+@inject NavigationManager Navigation
+
+@page "/login"
+
+<h3>Login</h3>
+
+<input @bind="login" placeholder="Login" />
+<input @bind="password" placeholder="Password" type="password" />
+<button @onclick="LoginUser">Login</button>
+
+@code {
+    string login, password;
+
+    async Task LoginUser()
+    {
+        if (await Auth.Login(login, password))
+            Navigation.NavigateTo("/");
+    }
+}
