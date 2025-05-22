@@ -10,6 +10,7 @@
 <div class="container py-4">
     <h1 class="mb-4">Task Tracker</h1>
 
+    <CreateTaskModal @ref="ModalRef" OnTaskCreated="AddTask" />
     <!-- Filters -->
     <div class="row mb-4">
         <div class="col-md-3">
@@ -27,7 +28,7 @@
             <input class="form-control" type="date" @bind="FilterDate">
         </div>
         <div class="col-md-3 text-end">
-            <button class="btn btn-primary" @onclick="CreateTask">+ New Task</button>
+            <button class="btn btn-primary" @onclick="() => ModalRef.Show()">+ New Task</button>
         </div>
     </div>
 
@@ -63,7 +64,13 @@
         { StatusTask.InProgress, "In Progress" },
         { StatusTask.Done, "Completed" }
     };
+    private CreateTaskModal? ModalRef;
 
+    private void AddTask(TaskItem newTask)
+    {
+        AllTasks.Add(newTask);
+        StateHasChanged();
+    }
     List<TaskItem> AllTasks = new(){
     new TaskItem { Id = Guid.NewGuid(), Title = "Setup Project", Description = "Create project structure", Status = StatusTask.Created, CreatedByUserId = Guid.Empty, CreatedAt = DateTime.UtcNow.AddDays(-1) },
     new TaskItem { Id = Guid.NewGuid(), Title = "Build UI", Description = "Design main screen", Status = StatusTask.Created, CreatedByUserId = Guid.Empty, CreatedAt = DateTime.UtcNow },

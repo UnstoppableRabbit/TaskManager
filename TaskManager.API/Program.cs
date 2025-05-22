@@ -12,22 +12,39 @@ using Microsoft.EntityFrameworkCore;
 using TaskManager.API.Services;
 using Domain.Model;
 using Domain.Enums;
+using Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlite("TaskDb"));
+builder.Services.AddDbContext<Infrastructure.AppDbContext>(opt =>
+    opt.UseSqlite("Data Source=../Infrastructure/task.db"));
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddScoped<TaskRepository>();
+builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<TaskService>();
+
 builder.Services.AddAuthentication("Basic")
     .AddScheme<AuthenticationSchemeOptions, BasicAuthHandler>("Basic", null);
+
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+app.UseCors("AllowAll");
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseAuthentication();
@@ -48,7 +65,7 @@ app.MapPost("/login", async (LoginUserCommand cmd, UserService userService) =>
 
 app.MapPost("/tasks", [Authorize] async (CreateTaskCommand cmd, TaskService taskService, ClaimsPrincipal user) =>
 {
-    var task = await taskService.Create(cmd, Guid.Parse(user.Identity!.Name!));
+    var task = await taskService.Create(cmd, user.Identity!.Name!);
     return Results.Ok(task);
 });
 
@@ -75,14 +92,6 @@ app.MapGet("/tasks", async ([FromQuery] StatusTask? status, [FromQuery] Guid? cr
 
 app.Run();
 
-// Data/AppDbContext.cs
-public class AppDbContext : DbContext
-{
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-
-    public DbSet<User> Users => Set<User>();
-    public DbSet<TaskItem> Tasks => Set<TaskItem>();
-}
 
 // Models/User.cs
 public record RegisterUserCommand(string Login, string Password, string Name);
@@ -96,8 +105,8 @@ public record UpdateTaskCommand(short Status, string? Comment, TimeSpan? ActualT
 // Services/UserService.cs
 public class UserService
 {
-    private readonly AppDbContext _context;
-    public UserService(AppDbContext context) => _context = context;
+    private readonly Infrastructure.AppDbContext _context;
+    public UserService(Infrastructure.AppDbContext context) => _context = context;
 
     public async Task<bool> UserExists(string login) =>
         await _context.Users.AnyAsync(u => u.Login == login);

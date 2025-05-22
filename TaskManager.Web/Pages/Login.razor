@@ -5,16 +5,44 @@
 
 <h3>Login</h3>
 
-<input @bind="login" placeholder="Login" />
-<input @bind="password" placeholder="Password" type="password" />
-<button @onclick="LoginUser">Login</button>
+<div class="mb-3">
+    <input class="form-control" @bind="login" placeholder="Login" />
+</div>
+<div class="mb-3">
+    <input class="form-control" @bind="password" placeholder="Password" type="password" />
+</div>
+
+@if (loginFailed)
+{
+    <div class="alert alert-danger">
+        Пользователь не найден или неверный пароль.
+    </div>
+}
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="LoginUser">Login</button>
+    <button class="btn btn-secondary ms-2" @onclick="GoToRegister">Register</button>
+</div>
 
 @code {
     string login, password;
+    bool loginFailed = false;
 
     async Task LoginUser()
     {
+        loginFailed = false;
         if (await Auth.Login(login, password))
+        {
             Navigation.NavigateTo("/");
+        }
+        else
+        {
+            loginFailed = true;
+        }
+    }
+
+    void GoToRegister()
+    {
+        Navigation.NavigateTo("/register");
     }
 }
