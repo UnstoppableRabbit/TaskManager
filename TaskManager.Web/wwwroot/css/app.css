@@ -110,3 +110,13 @@ code {
     .task-card:hover {
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
+
+.drop-zone {
+    background-color: #f8f9fa;
+    transition: background-color 0.3s ease;
+}
+
+    .drop-zone:hover {
+        background-color: #e2e6ea;
+        cursor: pointer;
+    }

@@ -1,5 +1,6 @@
 ﻿@using Domain.Enums
 @using Domain.Model
+@using TaskManager.Web.Components
 @page "/"
 
 <PageTitle>Home</PageTitle>
@@ -31,25 +32,19 @@
     <div class="row">
         @foreach (var status in Enum.GetValues(typeof(StatusTask)))
         {
-            <div class="col-md-4 dropzone p-2"
-                 @ondragover:preventDefault
-                 @ondrop="@(async (e) => await OnDrop(e, (StatusTask)status))">
-                <h4>@statusLabels[(StatusTask)status]</h4>
-                @foreach (var task in FilteredTasks.Where(t => t.Status == (StatusTask)status))
-                {
-                    <div class="card task-card mb-3"
-                         draggable="true"
-                         @ondragstart="@((e) => OnDragStart(e, task.Id))">
+            <Dropzone Items="AllTasks.Where(x => x.Status == (StatusTask)status).ToList()" TItem="TaskItem" OnItemDrop="@((i)=>OnDrop(i, (StatusTask)status))" Class="col-md-4 drop-zone border rounded p-2">
+                <ChildContent>
+                    <div class="card task-card mb-3">
                         <div class="card-body">
-                            <h5 class="card-title">@task.Title</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">@task.CreatedByUserId</h6>
-                            <p class="card-text">@task.Description</p>
-                            <span class="badge bg-secondary">@task.Status</span>
-                            <p class="mt-2 small text-muted">Created: @task.CreatedAt.ToShortDateString()</p>
+                            <h5 class="card-title">@context.Title</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">@context.CreatedByUserId</h6>
+                            <p class="card-text">@context.Description</p>
+                            <span class="badge bg-secondary">@context.Status</span>
+                            <p class="mt-2 small text-muted">Created: @context.CreatedAt.ToShortDateString()</p>
                         </div>
                     </div>
-                }
-            </div>
+                </ChildContent>
+            </Dropzone>
         }
     </div>
 </div>
@@ -68,9 +63,9 @@
     };
 
     List<TaskItem> AllTasks = new(){
-    new TaskItem { Title = "Setup Project", Description = "Create project structure", Status = StatusTask.Created, CreatedByUserId = Guid.Empty, CreatedAt = DateTime.UtcNow.AddDays(-1) },
-    new TaskItem { Title = "Build UI", Description = "Design main screen", Status = StatusTask.Created, CreatedByUserId = Guid.Empty, CreatedAt = DateTime.UtcNow },
-    new TaskItem { Title = "API Layer", Description = "Implement backend", Status = StatusTask.Done, CreatedByUserId = Guid.Empty, CreatedAt = DateTime.UtcNow.AddDays(-2) },
+    new TaskItem { Id = Guid.NewGuid(), Title = "Setup Project", Description = "Create project structure", Status = StatusTask.Created, CreatedByUserId = Guid.Empty, CreatedAt = DateTime.UtcNow.AddDays(-1) },
+    new TaskItem { Id = Guid.NewGuid(), Title = "Build UI", Description = "Design main screen", Status = StatusTask.Created, CreatedByUserId = Guid.Empty, CreatedAt = DateTime.UtcNow },
+    new TaskItem { Id = Guid.NewGuid(), Title = "API Layer", Description = "Implement backend", Status = StatusTask.Done, CreatedByUserId = Guid.Empty, CreatedAt = DateTime.UtcNow.AddDays(-2) },
     };// заполните при инициализации
     IEnumerable<TaskItem> FilteredTasks => AllTasks
     // .Where(t => string.IsNullOrWhiteSpace(FilterUser) || t.CreatedByUserId.Contains(FilterUser, StringComparison.OrdinalIgnoreCase))
@@ -86,9 +81,8 @@
         DraggedTaskId = taskId;
     }
 
-    async Task OnDrop(DragEventArgs e, StatusTask newStatus)
+    void OnDrop(TaskItem task, StatusTask newStatus)
     {
-        var task = AllTasks.FirstOrDefault(t => t.Id == DraggedTaskId);
         if (task is not null && task.Status != newStatus)
         {
             task.Status = newStatus;
