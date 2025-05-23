@@ -2,7 +2,7 @@
 using Domain.Model;
 using System.Net.Http.Json;
 
-namespace TaskManager.Web
+namespace TaskManager.Web.Services
 {
     public class TaskApiService
     {
@@ -16,7 +16,7 @@ namespace TaskManager.Web
         public async Task<IEnumerable<TaskItem>?> GetTasksAsync()
         {
             var url = "/tasks";
-            
+
             return await _http.GetFromJsonAsync<IEnumerable<TaskItem>>(url);
         }
 

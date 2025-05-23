@@ -1,4 +1,4 @@
-namespace TaskManager.Web
+namespace TaskManager.Web.Services
 {
     public class DragDropService<T>
     {

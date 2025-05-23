@@ -23,26 +23,3 @@
     <button class="btn btn-primary" @onclick="LoginUser">Login</button>
     <button class="btn btn-secondary ms-2" @onclick="GoToRegister">Register</button>
 </div>
-
-@code {
-    string login, password;
-    bool loginFailed = false;
-
-    async Task LoginUser()
-    {
-        loginFailed = false;
-        if (await Auth.Login(login, password))
-        {
-            Navigation.NavigateTo("/");
-        }
-        else
-        {
-            loginFailed = true;
-        }
-    }
-
-    void GoToRegister()
-    {
-        Navigation.NavigateTo("/register");
-    }
-}

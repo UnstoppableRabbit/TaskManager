@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
 using System.Net.Http.Json;
 
-namespace TaskManager.Web
+namespace TaskManager.Web.Services
 {
     public class AuthService
     {

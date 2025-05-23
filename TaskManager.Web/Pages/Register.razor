@@ -1,6 +1,4 @@
 ﻿@page "/register"
-@inject AuthService Auth
-@inject NavigationManager Navigation
 
 <h3>Регистрация</h3>
 
@@ -25,27 +23,3 @@
     <button class="btn btn-primary" @onclick="RegisterUser">Зарегистрироваться</button>
     <button class="btn btn-secondary ms-2" @onclick="GoToLogin">Назад</button>
 </div>
-
-@code {
-    string login = string.Empty, password = string.Empty, name = string.Empty;
-    bool registerFailed = false;
-
-    async Task RegisterUser()
-    {
-        registerFailed = false;
-
-        if (await Auth.Register(login, password, name))
-        {
-            Navigation.NavigateTo("/");
-        }
-        else
-        {
-            registerFailed = true;
-        }
-    }
-
-    void GoToLogin()
-    {
-        Navigation.NavigateTo("/login");
-    }
-}

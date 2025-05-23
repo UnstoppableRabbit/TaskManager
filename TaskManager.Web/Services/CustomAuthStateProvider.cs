@@ -4,7 +4,7 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 
-namespace TaskManager.Web
+namespace TaskManager.Web.Services
 {
     public class CustomAuthStateProvider : AuthenticationStateProvider
     {
@@ -30,7 +30,7 @@ namespace TaskManager.Web
             var authHeader = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{login}:{password}"));
             _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authHeader);
 
-            var identity = new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name.ToString(), (string)login) }, "Basic");
+            var identity = new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name.ToString(), login) }, "Basic");
             return new AuthenticationState(new ClaimsPrincipal(identity));
         }
 

@@ -2,7 +2,7 @@
 using Domain.Model;
 using System.Net.Http.Json;
 
-namespace TaskManager.Web
+namespace TaskManager.Web.Services
 {
     public class UserApiService
     {
