@@ -50,6 +50,12 @@ app.UseSwaggerUI();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapGet("/users", [Authorize] async (UserService userService) =>
+{
+    var users = await userService.GetAllUsers();
+    return Results.Ok(users);
+});
+
 app.MapPost("/register", async (RegisterUserCommand cmd, UserService userService) =>
 {
     if (await userService.UserExists(cmd.Login)) return Results.BadRequest("User exists");
@@ -63,10 +69,10 @@ app.MapPost("/login", async (LoginUserCommand cmd, UserService userService) =>
     return user is null ? Results.Unauthorized() : Results.Ok(user);
 });
 
-app.MapPost("/tasks", [Authorize] async (CreateTaskCommand cmd, TaskService taskService, ClaimsPrincipal user) =>
+app.MapPost("/tasks", [Authorize] async (TaskItem task, TaskService taskService, ClaimsPrincipal user) =>
 {
-    var task = await taskService.Create(cmd, user.Identity!.Name!);
-    return Results.Ok(task);
+    var resultTask = await taskService.Create(task, user.Identity!.Name!);
+    return Results.Ok(resultTask);
 });
 
 app.MapDelete("/tasks/{id}", [Authorize] async (Guid id, TaskService taskService, ClaimsPrincipal user) =>
@@ -98,8 +104,6 @@ public record RegisterUserCommand(string Login, string Password, string Name);
 public record LoginUserCommand(string Login, string Password);
 public record AuthenticatedUser(string Login, string Name);
 
-// Models/TaskModels.cs
-public record CreateTaskCommand(string Title, string Description, DateTime DueAt);
 public record UpdateTaskCommand(short Status, string? Comment, TimeSpan? ActualTime);
 
 // Services/UserService.cs
@@ -110,10 +114,12 @@ public class UserService
 
     public async Task<bool> UserExists(string login) =>
         await _context.Users.AnyAsync(u => u.Login == login);
-
+    public async Task<List<User>> GetAllUsers() =>
+        await _context.Users.Select(x => new User { Id = x.Id, Name = x.Name, Login = x.Login }).ToListAsync();
     public async Task Register(RegisterUserCommand cmd)
     {
         var user = new User { Login = cmd.Login, Password = cmd.Password, Name = cmd.Name };
+        user.Id = Guid.NewGuid();
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
     }

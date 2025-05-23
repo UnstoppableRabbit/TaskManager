@@ -15,20 +15,19 @@ namespace TaskManager.API.Services
             _userRepo = userRepo;
         }
 
-        public async Task<TaskItem> Create(CreateTaskCommand cmd, string userLogin)
+        public async Task<TaskItem> Create(TaskItem task, string userLogin)
         {
             try 
             {
                 var user = await _userRepo.GetByLoginAsync(userLogin);
                 if (user is null)
                     throw new Exception("User not found");
-                var task = new TaskItem
+                task.CreatedByUserId = user.Id;
+                foreach (var com in task.Comments)
                 {
-                    Title = cmd.Title,
-                    Description = cmd.Description,
-                    CreatedAt = cmd.DueAt,
-                    CreatedByUserId = user.Id
-                };
+                    com.UserId = user.Id;
+                    com.CreatedAt = DateTime.UtcNow;
+                }
                 await _taskRepo.AddAsync(task);
                 return task;
             }
