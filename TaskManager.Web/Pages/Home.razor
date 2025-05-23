@@ -2,6 +2,7 @@
 @using Domain.Model
 @using TaskManager.Web.Components
 @inject TaskApiService taskApiService
+@inject UserApiService userApiService
 
 @attribute [Authorize]
 @page "/"
@@ -12,6 +13,7 @@
     <h1 class="mb-4">Task Tracker</h1>
 
     <CreateTaskModal @ref="ModalRef" OnTaskCreated="AddTask" />
+    <ViewTaskModal @ref="ViewModal" OnTaskUpdated="SaveTask" OnTaskDeleted="DeleteTask" />
     <!-- Filters -->
     <div class="row mb-4">
         <div class="col-md-3">
@@ -38,7 +40,7 @@
         {
             <Dropzone Items="AllTasks.Where(x => x.Status == (StatusTask)status).ToList()" TItem="TaskItem" OnItemDrop="@((i)=>OnDrop(i, (StatusTask)status))" Class="col-md-4 drop-zone border rounded p-2">
                 <ChildContent>
-                    <div class="card task-card mb-3">
+                    <div class="card task-card mb-3" @onclick="() => OpenViewModal(context)">
                         <div class="card-body">
                             <h5 class="card-title">@context.Title</h5>
                             <h6 class="card-subtitle mb-2 text-muted">@context.CreatedByUserId</h6>
@@ -58,14 +60,16 @@
     string? FilterStatus;
     DateTime? FilterDate;
     Guid DraggedTaskId;
+    User CurrentUser = new User();
 
     protected override async Task OnInitializedAsync()
     {
         AllTasks = (await taskApiService.GetTasksAsync())?.ToList();
+        CurrentUser = await userApiService.GetCurrentUserAsync();
     }
 
     readonly Dictionary<StatusTask, string> statusLabels = new()
-        {
+    {
         { StatusTask.Created, "Created" },
         { StatusTask.InProgress, "In Progress" },
         { StatusTask.Done, "Completed" }
@@ -75,6 +79,25 @@
     private async Task AddTask(TaskItem newTask)
     {
         AllTasks.Add(await taskApiService.CreateTaskAsync(newTask));
+        StateHasChanged();
+    }
+
+    private ViewTaskModal? ViewModal;
+
+    private async Task OpenViewModal(TaskItem task)
+    {
+        ViewModal!.Task = task;
+        ViewModal.Show();
+    }
+
+    private async Task SaveTask(TaskItem task)
+    {
+        await taskApiService.UpdateTaskAsync(task.Id, task);
+    }
+    private async Task DeleteTask(TaskItem task)
+    {
+        await taskApiService.DeleteTaskAsync(task.Id);
+        AllTasks.Remove(task);
         StateHasChanged();
     }
 

@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using System.Collections.Generic;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
@@ -69,6 +68,11 @@ app.MapPost("/login", async (LoginUserCommand cmd, UserService userService) =>
     return user is null ? Results.Unauthorized() : Results.Ok(user);
 });
 
+app.MapGet("/currentUser", [Authorize] async (ClaimsPrincipal user, UserService userService) =>
+{
+    return Results.Ok(await userService.GetCurrentUser(user.Identity!.Name!));
+});
+
 app.MapPost("/tasks", [Authorize] async (TaskItem task, TaskService taskService, ClaimsPrincipal user) =>
 {
     var resultTask = await taskService.Create(task, user.Identity!.Name!);
@@ -116,6 +120,13 @@ public class UserService
         await _context.Users.AnyAsync(u => u.Login == login);
     public async Task<List<User>> GetAllUsers() =>
         await _context.Users.Select(x => new User { Id = x.Id, Name = x.Name, Login = x.Login }).ToListAsync();
+
+    public async Task<User> GetCurrentUser(string login) {
+        var user = await _context.Users.FirstAsync(x => x.Login == login);
+        user.Password = string.Empty;
+        return user;
+    }
+
     public async Task Register(RegisterUserCommand cmd)
     {
         var user = new User { Login = cmd.Login, Password = cmd.Password, Name = cmd.Name };

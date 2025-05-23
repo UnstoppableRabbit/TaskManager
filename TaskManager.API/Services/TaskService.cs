@@ -45,7 +45,7 @@ namespace TaskManager.API.Services
                 if (user is null) 
                     throw new Exception("User not found");
                 var task = await _taskRepo.DeleteAsync(id, user.Id);
-                return true;
+                return task;
             }
             catch (Exception ex)
             {

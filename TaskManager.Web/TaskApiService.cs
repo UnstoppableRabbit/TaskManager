@@ -40,9 +40,9 @@ namespace TaskManager.Web
             return response.IsSuccessStatusCode;
         }
 
-        public async Task<TaskItem?> UpdateTaskAsync(Guid id, TaskItem cmd)
+        public async Task<TaskItem?> UpdateTaskAsync(Guid id, TaskItem task)
         {
-            var result = await _http.PutAsJsonAsync($"/tasks/{id}", cmd);
+            var result = await _http.PutAsJsonAsync($"/tasks/{id}", task);
             return result.IsSuccessStatusCode ? await result.Content.ReadFromJsonAsync<TaskItem>() : null;
         }
     }
