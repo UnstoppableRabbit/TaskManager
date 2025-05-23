@@ -1,4 +1,5 @@
-﻿using Domain.Model;
+﻿using Domain.Enums;
+using Domain.Model;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure
@@ -9,25 +10,47 @@ namespace Infrastructure
         public TaskRepository(AppDbContext context) => _context = context;
 
         public Task<TaskItem?> GetByIdAsync(Guid id) =>
-            _context.Tasks.FirstOrDefaultAsync(t => t.Id == id);
+            _context.Tasks.Include(x => x.Comments).FirstOrDefaultAsync(t => t.Id == id);
 
         public Task<List<TaskItem>> GetAllAsync() =>
-            _context.Tasks.ToListAsync();
+            _context.Tasks.Include(x => x.Comments).ToListAsync();
 
         public Task AddAsync(TaskItem task)
         {
             _context.Tasks.Add(task);
+            _context.Comments.AddRange(task.Comments);
             return _context.SaveChangesAsync();
         }
 
-        public Task UpdateAsync(Guid taskId, TaskItem task)
+        public async Task UpdateAsync(Guid taskId, TaskItem task, Guid userId)
         {
-            var existingTask = _context.Tasks.FirstOrDefault(t => t.Id == taskId);
-            if (existingTask is null) throw new Exception("Task by this id not found");
-            existingTask.Comments = task.Comments;
+            var existingTask = _context.Tasks
+                 .Include(t => t.Comments)
+                 .FirstOrDefault(t => t.Id == taskId && t.CreatedByUserId == userId);
+
+            if (existingTask is null)
+                throw new Exception("Task by this id not found");
+
             existingTask.ActualDuration = task.ActualDuration;
             existingTask.Status = task.Status;
-            return _context.SaveChangesAsync();
+
+            if (existingTask.Status == StatusTask.Done)
+            {
+                existingTask.ClosedAt = DateTime.UtcNow;
+            }
+
+            foreach (var newComment in task.Comments)
+            {
+                if (!existingTask.Comments.Any(c => c.Id == newComment.Id))
+                {
+                    newComment.TaskItemId = taskId;
+                    newComment.UserId = userId;
+                    existingTask.Comments.Add(newComment);
+                    _context.Comments.Add(newComment);
+                }
+            }
+
+            await _context.SaveChangesAsync();
         }
 
         public async Task<bool> DeleteAsync(Guid id, Guid userId)

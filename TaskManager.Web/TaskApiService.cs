@@ -13,18 +13,10 @@ namespace TaskManager.Web
             _http = http;
         }
 
-        public async Task<IEnumerable<TaskItem>?> GetTasksAsync(StatusTask? status = null, Guid? createdBy = null, DateTime? from = null, DateTime? to = null, string? sortBy = null)
+        public async Task<IEnumerable<TaskItem>?> GetTasksAsync()
         {
-            var query = new List<string>();
-            if (status != null) query.Add($"status={status}");
-            if (createdBy != null) query.Add($"createdBy={createdBy}");
-            if (from != null) query.Add($"from={from.Value:O}");
-            if (to != null) query.Add($"to={to.Value:O}");
-            if (sortBy != null) query.Add($"sortBy={sortBy}");
-
             var url = "/tasks";
-            if (query.Any()) url += "?" + string.Join("&", query);
-
+            
             return await _http.GetFromJsonAsync<IEnumerable<TaskItem>>(url);
         }
 

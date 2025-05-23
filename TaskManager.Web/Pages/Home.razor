@@ -3,6 +3,7 @@
 @using TaskManager.Web.Components
 @inject TaskApiService taskApiService
 @inject UserApiService userApiService
+@inject NavigationManager Navigation
 
 @attribute [Authorize]
 @page "/"
@@ -10,8 +11,6 @@
 <PageTitle>Home</PageTitle>
 
 <div class="container py-4">
-    <h1 class="mb-4">Task Tracker</h1>
-
     <CreateTaskModal @ref="ModalRef" OnTaskCreated="AddTask" />
     <ViewTaskModal @ref="ViewModal" CurrentUser="CurrentUser" OnTaskUpdated="SaveTask" OnTaskDeleted="DeleteTask" />
     <!-- Filters -->
@@ -138,10 +137,20 @@
 
     protected override async Task OnInitializedAsync()
     {
-        AllTasks = (await taskApiService.GetTasksAsync())?.ToList();
-        AllUsers = (await userApiService.GetAllUsersAsync())?.ToList();
-        CurrentUser = await userApiService.GetCurrentUserAsync();
-        ApplyFilters();
+        try
+        {
+            AllTasks = (await taskApiService.GetTasksAsync())?.ToList();
+            AllUsers = (await userApiService.GetAllUsersAsync())?.ToList();
+            CurrentUser = await userApiService.GetCurrentUserAsync();
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.ToLower().Contains("401"))
+                Navigation.NavigateTo("/login");
+            Console.WriteLine(ex.Message);
+       
+        }
     }
 
     readonly Dictionary<StatusTask, string> statusLabels = new()
@@ -155,6 +164,7 @@
     private async Task AddTask(TaskItem newTask)
     {
         AllTasks.Add(await taskApiService.CreateTaskAsync(newTask));
+        ApplyFilters();
         StateHasChanged();
     }
 
@@ -174,6 +184,7 @@
     {
         await taskApiService.DeleteTaskAsync(task.Id);
         AllTasks.Remove(task);
+        ApplyFilters();
         StateHasChanged();
     }
 
@@ -193,11 +204,12 @@
         DraggedTaskId = taskId;
     }
 
-    void OnDrop(TaskItem task, StatusTask newStatus)
+    async Task OnDrop(TaskItem task, StatusTask newStatus)
     {
-        if (task is not null && task.Status != newStatus)
+        if (task is not null && task.Status != newStatus && task.CreatedByUserId == CurrentUser.Id)
         {
             task.Status = newStatus;
+            await taskApiService.UpdateTaskAsync(task.Id, task);
         }
 
         StateHasChanged();

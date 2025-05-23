@@ -53,24 +53,21 @@ namespace TaskManager.API.Services
             }
         }
 
-        public async Task<TaskItem?> Update(Guid id, UpdateTaskCommand cmd, string userLogin)
+        public async Task<TaskItem?> Update(Guid id, TaskItem updatedTask, string userLogin)
         {
-            var task = await _taskRepo.GetByIdAsync(id);
-            if (task is null) return null;
-
-            if (Enum.IsDefined(typeof(StatusTask), cmd.Status)) task.Status = (StatusTask)cmd.Status;
-            if (cmd.ActualTime is not null) task.ActualDuration = cmd.ActualTime;
-
-            if (cmd.Status == (short)StatusTask.Done)
-            {
-                task.ClosedAt = DateTime.UtcNow;
-            }
-            await _taskRepo.UpdateAsync(id, task);
-            return task;
+            var user = await _userRepo.GetByLoginAsync(userLogin);
+            if (user is null)
+                throw new Exception("User not found");
+            await _taskRepo.UpdateAsync(id, updatedTask, user.Id);
+            return updatedTask;
         }
-
+        public async Task<IEnumerable<TaskItem>> GetAllTasks()
+        {
+            var tasks = await _taskRepo.GetAllAsync();
+            return tasks;
+        }
         public async Task<IEnumerable<TaskItem>> GetFiltered(StatusTask? status, Guid? createdBy,
-            DateTime? from, DateTime? to, string? sortBy)
+        DateTime? from, DateTime? to, string? sortBy)
         {
             var query = _taskRepo.Query();
 

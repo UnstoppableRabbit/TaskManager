@@ -1,6 +1,5 @@
 // Program.cs
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Security.Claims;
@@ -10,7 +9,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using TaskManager.API.Services;
 using Domain.Model;
-using Domain.Enums;
 using Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -90,18 +88,15 @@ app.MapDelete("/tasks/{id}", [Authorize] async (Guid id, TaskService taskService
     return result ? Results.Ok() : Results.NotFound();
 });
 
-app.MapPut("/tasks/{id}", [Authorize] async (Guid id, UpdateTaskCommand cmd, TaskService taskService, ClaimsPrincipal user) =>
+app.MapPut("/tasks/{id}", [Authorize] async (Guid id, TaskItem task, TaskService taskService, ClaimsPrincipal user) =>
 {
-    var result = await taskService.Update(id, cmd, user.Identity!.Name!);
+    var result = await taskService.Update(id, task, user.Identity!.Name!);
     return result is null ? Results.NotFound() : Results.Ok(result);
 });
 
-app.MapGet("/tasks", async ([FromQuery] StatusTask? status, [FromQuery] Guid? createdBy,
-                             [FromQuery] DateTime? from, [FromQuery] DateTime? to,
-                             [FromQuery] string? sortBy,
-                             TaskService taskService) =>
+app.MapGet("/tasks", [Authorize] async(TaskService taskService) =>
 {
-    var tasks = await taskService.GetFiltered(status, createdBy, from, to, sortBy);
+    var tasks = await taskService.GetAllTasks();
     return Results.Ok(tasks);
 });
 

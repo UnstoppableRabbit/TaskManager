@@ -147,7 +147,7 @@
     {
         if (!string.IsNullOrWhiteSpace(NewComment))
         {
-            Task.Comments.Add(new Comment
+            taskCopy.Comments.Add(new Comment
                 {
                     CreatedAt = DateTime.UtcNow,
                     Text = NewComment.Trim(),
