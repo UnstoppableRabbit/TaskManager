@@ -1,21 +1,51 @@
-﻿@inject AuthService Auth
+﻿@page "/register"
+@inject AuthService Auth
 @inject NavigationManager Navigation
 
-@page "/register"
+<h3>Регистрация</h3>
 
-<h3>Register</h3>
+<div class="mb-3">
+    <input class="form-control" @bind="login" placeholder="Логин" />
+</div>
+<div class="mb-3">
+    <input class="form-control" @bind="name" placeholder="Имя" />
+</div>
+<div class="mb-3">
+    <input class="form-control" @bind="password" placeholder="Пароль" type="password" />
+</div>
 
-<input @bind="login" placeholder="Login" />
-<input @bind="name" placeholder="Name" />
-<input @bind="password" placeholder="Password" type="password" />
-<button @onclick="RegisterUser">Register</button>
+@if (registerFailed)
+{
+    <div class="alert alert-danger">
+        Не удалось зарегистрироваться. Попробуйте другой логин.
+    </div>
+}
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="RegisterUser">Зарегистрироваться</button>
+    <button class="btn btn-secondary ms-2" @onclick="GoToLogin">Назад</button>
+</div>
 
 @code {
-    string login, password, name;
+    string login = string.Empty, password = string.Empty, name = string.Empty;
+    bool registerFailed = false;
 
     async Task RegisterUser()
     {
+        registerFailed = false;
+
         if (await Auth.Register(login, password, name))
+        {
             Navigation.NavigateTo("/");
+        }
+        else
+        {
+            registerFailed = true;
+        }
+    }
+
+    void GoToLogin()
+    {
+        Navigation.NavigateTo("/login");
     }
 }

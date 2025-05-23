@@ -13,24 +13,42 @@
     <h1 class="mb-4">Task Tracker</h1>
 
     <CreateTaskModal @ref="ModalRef" OnTaskCreated="AddTask" />
-    <ViewTaskModal @ref="ViewModal" OnTaskUpdated="SaveTask" OnTaskDeleted="DeleteTask" />
+    <ViewTaskModal @ref="ViewModal" CurrentUser="CurrentUser" OnTaskUpdated="SaveTask" OnTaskDeleted="DeleteTask" />
     <!-- Filters -->
-    <div class="row mb-4">
+    <div class="row mb-3">
         <div class="col-md-3">
-            <input class="form-control" placeholder="Filter by user" @bind="FilterUser">
-        </div>
-        <div class="col-md-3">
-            <select class="form-select" @bind="FilterStatus">
-                <option value="">All Statuses</option>
-                <option value="Created">Created</option>
-                <option value="InProgress">In Progress</option>
-                <option value="Completed">Completed</option>
+            <label>Пользователь</label>
+            <select class="form-select" @bind="FilterUser">
+                <option value="">-- Все пользователи --</option>
+                @foreach (var user in AllUsers)
+                {
+                    <option value="@user.Id">@user.Name</option>
+                }
             </select>
         </div>
+
         <div class="col-md-3">
-            <input class="form-control" type="date" @bind="FilterDate">
+            <label>Создана от</label>
+            <input class="form-control" type="date" @bind="CreatedFrom"/>
         </div>
-        <div class="col-md-3 text-end">
+
+        <div class="col-md-3">
+            <label>Создана до</label>
+            <input class="form-control" type="date" @bind="CreatedTo"/>
+        </div>
+
+        <div class="col-md-3">
+            <label>Завершена от</label>
+            <input class="form-control" type="date" @bind="ClosedFrom"/>
+        </div>
+
+        <div class="col-md-3 mt-2">
+            <label>Завершена до</label>
+            <input class="form-control" type="date" @bind="ClosedTo"/>
+        </div>
+    </div>
+    <div class="row mb-3">
+        <div class="col-md-3">
             <button class="btn btn-primary" @onclick="() => ModalRef.Show()">+ New Task</button>
         </div>
     </div>
@@ -38,12 +56,12 @@
     <div class="row">
         @foreach (var status in Enum.GetValues(typeof(StatusTask)))
         {
-            <Dropzone Items="AllTasks.Where(x => x.Status == (StatusTask)status).ToList()" TItem="TaskItem" OnItemDrop="@((i)=>OnDrop(i, (StatusTask)status))" Class="col-md-4 drop-zone border rounded p-2">
+            <Dropzone AllowsDrag="((x) => x.CreatedByUserId == CurrentUser.Id)" Items="FilteredTasks.Where(x => x.Status == (StatusTask)status).ToList()" TItem="TaskItem" OnItemDrop="@((i)=>OnDrop(i, (StatusTask)status))" Class="col-md-4 drop-zone border rounded p-2">
                 <ChildContent>
                     <div class="card task-card mb-3" @onclick="() => OpenViewModal(context)">
                         <div class="card-body">
                             <h5 class="card-title">@context.Title</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">@context.CreatedByUserId</h6>
+                            <h6 class="card-subtitle mb-2 text-muted">@(AllUsers.FirstOrDefault(x => x.Id == context.CreatedByUserId)?.Name ?? context.CreatedByUserId.ToString())</h6>
                             <p class="card-text">@context.Description</p>
                             <span class="badge bg-secondary">@context.Status</span>
                             <p class="mt-2 small text-muted">Created: @context.CreatedAt.ToShortDateString()</p>
@@ -56,16 +74,74 @@
 </div>
 
 @code {
-    string? FilterUser;
-    string? FilterStatus;
-    DateTime? FilterDate;
+    private Guid? filterUser;
+    private DateTime? createdFrom;
+    private DateTime? createdTo;
+    private DateTime? closedFrom;
+    private DateTime? closedTo;
+
+    private Guid? FilterUser
+    {
+        get => filterUser;
+        set
+        {
+            filterUser = value;
+            ApplyFilters();
+        }
+    }
+
+    private DateTime? CreatedFrom
+    {
+        get => createdFrom;
+        set
+        {
+            createdFrom = value;
+            ApplyFilters();
+        }
+    }
+
+    private DateTime? CreatedTo
+    {
+        get => createdTo;
+        set
+        {
+            createdTo = value;
+            ApplyFilters();
+        }
+    }
+
+    private DateTime? ClosedFrom
+    {
+        get => closedFrom;
+        set
+        {
+            closedFrom = value;
+            ApplyFilters();
+        }
+    }
+
+    private DateTime? ClosedTo
+    {
+        get => closedTo;
+        set
+        {
+            closedTo = value;
+            ApplyFilters();
+        }
+    }
     Guid DraggedTaskId;
-    User CurrentUser = new User();
+
+    User CurrentUser = new();
+    List<TaskItem> AllTasks = new();
+    List<TaskItem> FilteredTasks = new();
+    List<User> AllUsers = new();
 
     protected override async Task OnInitializedAsync()
     {
         AllTasks = (await taskApiService.GetTasksAsync())?.ToList();
+        AllUsers = (await userApiService.GetAllUsersAsync())?.ToList();
         CurrentUser = await userApiService.GetCurrentUserAsync();
+        ApplyFilters();
     }
 
     readonly Dictionary<StatusTask, string> statusLabels = new()
@@ -101,11 +177,16 @@
         StateHasChanged();
     }
 
-    List<TaskItem> AllTasks = new();
-
-    IEnumerable<TaskItem> FilteredTasks => AllTasks
-    .Where(t => string.IsNullOrWhiteSpace(FilterStatus) || t.Status == Enum.Parse<StatusTask>(FilterStatus))
-    .Where(t => FilterDate == null || t.CreatedAt.Date == FilterDate.Value.Date);
+    private void ApplyFilters(ChangeEventArgs? _ = null)
+    {
+        FilteredTasks = AllTasks
+            .Where(t => !FilterUser.HasValue || t.CreatedByUserId == FilterUser)
+            .Where(t => !CreatedFrom.HasValue || t.CreatedAt.Date >= CreatedFrom.Value.Date)
+            .Where(t => !CreatedTo.HasValue || t.CreatedAt.Date <= CreatedTo.Value.Date)
+            .Where(t => !ClosedFrom.HasValue || (t.ClosedAt.HasValue && t.ClosedAt.Value.Date >= ClosedFrom.Value.Date))
+            .Where(t => !ClosedTo.HasValue || (t.ClosedAt.HasValue && t.ClosedAt.Value.Date <= ClosedTo.Value.Date))
+            .ToList();
+    }
 
     void OnDragStart(DragEventArgs e, Guid taskId)
     {
@@ -121,14 +202,4 @@
 
         StateHasChanged();
     }
-
-    RenderFragment<TaskItem> TaskCard => task => @<div class="card task-card mb-3">
-        <div class="card-body">
-            <h5 class="card-title">@task.Title</h5>
-            <h6 class="card-subtitle mb-2 text-muted">@task.CreatedByUserId</h6>
-            <p class="card-text">@task.Description</p>
-            <span class="badge bg-secondary">@task.Status</span>
-            <p class="mt-2 small text-muted">Created: @task.CreatedAt.ToShortDateString()</p>
-        </div>
-    </div>;
 }

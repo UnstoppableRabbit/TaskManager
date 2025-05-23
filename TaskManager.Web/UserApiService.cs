@@ -19,5 +19,11 @@ namespace TaskManager.Web
 
             return await _http.GetFromJsonAsync<User>(url);
         }
+        public async Task<List<User>> GetAllUsersAsync()
+        {
+            var url = "/allUsers";
+
+            return await _http.GetFromJsonAsync<List<User>>(url);
+        }
     }
 }

@@ -73,6 +73,11 @@ app.MapGet("/currentUser", [Authorize] async (ClaimsPrincipal user, UserService 
     return Results.Ok(await userService.GetCurrentUser(user.Identity!.Name!));
 });
 
+app.MapGet("/allUsers", [Authorize] async (UserService userService) =>
+{
+    return Results.Ok(await userService.GetAllUsers());
+});
+
 app.MapPost("/tasks", [Authorize] async (TaskItem task, TaskService taskService, ClaimsPrincipal user) =>
 {
     var resultTask = await taskService.Create(task, user.Identity!.Name!);

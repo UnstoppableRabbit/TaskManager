@@ -13,38 +13,67 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Название</label>
-                        <input class="form-control" value="@Task.Title" disabled />
+                        <input class="form-control" value="@taskCopy.Title" disabled />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Описание</label>
-                        <textarea class="form-control" value="@Task.Description" disabled></textarea>
+                        <textarea class="form-control" value="@taskCopy.Description" disabled></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Статус</label>
-                        <select class="form-select" @bind="Task.Status">
-                            <option value="Created">Создана</option>
-                            <option value="InProgress">В работе</option>
-                            <option value="Done">Завершена</option>
-                        </select>
+                        @if (CurrentUser.Id != taskCopy.CreatedByUserId)
+                        {
+                            <select class="form-select" @bind="taskCopy.Status" disabled>
+                                <option value="Created">Создана</option>
+                                <option value="InProgress">В работе</option>
+                                <option value="Done">Завершена</option>
+                            </select>
+                        }
+                        else
+                        {
+                            <select class="form-select" @bind="taskCopy.Status">
+                                <option value="Created">Создана</option>
+                                <option value="InProgress">В работе</option>
+                                <option value="Done">Завершена</option>
+                            </select>
+                        }
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Фактическое время выполнения (часы:минуты)</label>
-                        <input class="form-control"
-                               placeholder="например: 01:30"
-                               @bind="ActualDurationText"
-                               @onblur="ParseDuration" />
+                        @if (CurrentUser.Id != taskCopy.CreatedByUserId)
+                        {
+                            <input class="form-control"
+                                   placeholder="например: 01:30"
+                                   disabled
+                                   @bind="ActualDurationText"
+                                   @onblur="ParseDuration" />
+                        }
+                        else
+                        {
+                            <input class="form-control"
+                                   placeholder="например: 01:30"
+                                   @bind="ActualDurationText"
+                                   @onblur="ParseDuration" />
+                        }
                     </div>
-                    @if (Task.Status == StatusTask.Done)
+                    @if (taskCopy.Status == StatusTask.Done)
                     {
                         <div class="mb-3">
                             <label class="form-label">Дата завершения</label>
-                            <input class="form-control" type="datetime-local" @bind="Task.ClosedAt" />
+                            @if (CurrentUser.Id != taskCopy.CreatedByUserId)
+                            {
+                                <input class="form-control" type="datetime-local" value="@taskCopy.ClosedAt" disabled />
+                            }
+                            else
+                            {
+                                <input class="form-control" type="datetime-local" @bind="taskCopy.ClosedAt" />
+                            }
                         </div>
                     }
                     <div class="mb-3">
                         <label class="form-label">Комментарии</label>
                         <ul class="list-group mb-2">
-                            @foreach (var c in Task.Comments)
+                            @foreach (var c in taskCopy.Comments)
                             {
                                 <li class="list-group-item">@c.Text (@c.CreatedAt)</li>
                             }
@@ -56,9 +85,16 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-danger me-auto" @onclick="Delete">Удалить</button>
+                    @if(taskCopy.CreatedByUserId == CurrentUser.Id)
+                    {
+                        <button class="btn btn-danger me-auto" @onclick="Delete">Удалить</button>
+                    }
                     <button class="btn btn-secondary" @onclick="Close">Закрыть</button>
-                    <button class="btn btn-primary" @onclick="Submit">Сохранить изменения</button>
+                    @if (taskCopy.CreatedByUserId == CurrentUser.Id)
+                    {
+
+                        <button class="btn btn-primary" @onclick="Submit">Сохранить изменения</button>
+                    }
                 </div>
             </div>
         </div>
@@ -67,17 +103,29 @@
 
 @code {
     [Parameter] public TaskItem Task { get; set; } = default!;
+    [Parameter] public User CurrentUser { get; set; } = default!;
     [Parameter] public EventCallback<TaskItem> OnTaskUpdated { get; set; }
     [Parameter] public EventCallback<TaskItem> OnTaskDeleted { get; set; }
 
     private string? ActualDurationText;
     private string? NewComment;
     private bool IsVisible = false;
-
+    public TaskItem taskCopy { get; set; } = default!;
     public void Show()
     {
         ActualDurationText = Task.ActualDuration?.ToString(@"hh\:mm");
         IsVisible = true;
+        taskCopy = new TaskItem
+        {
+            Title = Task.Title,
+            Description = Task.Description,
+            Status = Task.Status,
+            CreatedAt = Task.CreatedAt,
+            ClosedAt = Task.ClosedAt,
+            ActualDuration = Task.ActualDuration,
+            Comments = Task.Comments.ToList(),
+            CreatedByUserId = Task.CreatedByUserId
+        };
         StateHasChanged();
     }
 
@@ -92,7 +140,7 @@
     private void ParseDuration()
     {
         if (TimeSpan.TryParse(ActualDurationText, out var parsed))
-            Task.ActualDuration = parsed;
+            taskCopy.ActualDuration = parsed;
     }
 
     private void AddComment()
@@ -111,6 +159,11 @@
 
     private async Task Submit()
     {
+        Task.Status = taskCopy.Status;
+        Task.Comments = taskCopy.Comments;
+        Task.ActualDuration = taskCopy.ActualDuration;
+        Task.ClosedAt = taskCopy.ClosedAt;
+
         if (Task.Status == StatusTask.Done && !Task.ClosedAt.HasValue)
             Task.ClosedAt = DateTime.UtcNow;
 
